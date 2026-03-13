@@ -42,6 +42,8 @@ def normalize_unread_summary(data: dict[str, Any]) -> dict[str, int]:
 
 
 def normalize_paged_notes(data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        data = {}
     return {
         "notes": data.get("notes", []),
         "has_more": bool(data.get("has_more", False)),

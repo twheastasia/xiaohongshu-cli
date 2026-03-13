@@ -64,11 +64,15 @@ uv sync
 ```bash
 # ─── Auth ─────────────────────────────────────────
 xhs login                             # Extract cookies from browser
+xhs --cookie-source chrome login      # Extract from Chrome → chrome_cookies.json
+xhs --cookies-file my.json login      # Save to ~/.xiaohongshu-cli/my.json
 xhs login --qrcode                    # Browser-assisted QR login, scan in terminal
 xhs status                            # Check login status
 xhs whoami                            # Detailed profile (fans, likes, etc)
 xhs whoami --json                     # Structured JSON envelope
 xhs logout                            # Clear saved cookies
+xhs --cookie-source chrome logout     # Extract from Chrome → chrome_cookies.json
+xhs logout --all                      # Remove ALL cookie files
 
 # ─── Search ───────────────────────────────────────
 xhs search "美食"                      # Search notes
@@ -353,10 +357,15 @@ uv sync
 ```bash
 # 认证
 xhs login                             # 从浏览器提取 Cookie
-xhs login --qrcode                    # browser-assisted 二维码扫码登录（终端显示二维码）
-xhs status                            # 检查登录状态
-xhs whoami                            # 查看用户资料
-xhs logout                            # 清除缓存的 Cookie
+xhs --cookie-source chrome login      # Extract from Chrome → chrome_cookies.json
+xhs --cookies-file my.json login      # Save to ~/.xiaohongshu-cli/my.json
+xhs login --qrcode                    # Browser-assisted QR login, scan in terminal
+xhs status                            # Check login status
+xhs whoami                            # Detailed profile (fans, likes, etc)
+xhs whoami --json                     # Structured JSON envelope
+xhs logout                            # Clear saved cookies
+xhs --cookie-source chrome logout     # Extract from Chrome → chrome_cookies.json
+xhs logout --all                      # Remove ALL cookie files
 
 # 搜索
 xhs search "美食"                      # 搜索笔记

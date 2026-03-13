@@ -16,6 +16,7 @@ import random
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from .client import XhsClient
@@ -341,6 +342,7 @@ def _browser_assisted_qrcode_login(
     *,
     on_status: callable[[str], None] | None = None,
     timeout_s: int = POLL_TIMEOUT_S,
+    cookie_path: Path | None = None,
 ) -> dict[str, str]:
     """Log in by letting a real browser complete the QR flow, then export cookies."""
     _ensure_camoufox_ready()
@@ -434,7 +436,7 @@ def _browser_assisted_qrcode_login(
                 f"missing={', '.join(missing)} completion_data={completion_data}"
             )
 
-        save_cookies(cookies)
+        save_cookies(cookies, cookie_path)
 
         user_id = str(login_info.get("user_id", "")).strip() or _resolved_user_id(completion_data)
         if user_id:
@@ -447,6 +449,7 @@ def _http_qrcode_login(
     *,
     on_status: callable[[str], None] | None = None,
     timeout_s: int = POLL_TIMEOUT_S,
+    cookie_path: Path | None = None,
 ) -> dict[str, str]:
     """Run the legacy pure-HTTP QR login flow."""
     a1 = _generate_a1()
@@ -521,7 +524,7 @@ def _http_qrcode_login(
                 )
                 user_id = _resolved_user_id(completion_data) or confirmed_user_id
                 cookies = _build_saved_cookies(a1, webid, client.cookies)
-                save_cookies(cookies)
+                save_cookies(cookies, cookie_path)
                 _emit_status(on_status, f"👤 User ID: {user_id}")
                 return cookies
 
@@ -537,12 +540,13 @@ def qrcode_login(
     on_status: callable[[str], None] | None = None,
     timeout_s: int = POLL_TIMEOUT_S,
     prefer_browser_assisted: bool = False,
+    cookie_path: Path | None = None,
 ) -> dict[str, str]:
     """Run the QR code login flow."""
     if prefer_browser_assisted:
         try:
-            return _browser_assisted_qrcode_login(on_status=on_status, timeout_s=timeout_s)
+            return _browser_assisted_qrcode_login(on_status=on_status, timeout_s=timeout_s, cookie_path=cookie_path)
         except BrowserQrLoginUnavailable as exc:
             logger.info("Browser-assisted QR login unavailable, falling back to HTTP flow: %s", exc)
 
-    return _http_qrcode_login(on_status=on_status, timeout_s=timeout_s)
+    return _http_qrcode_login(on_status=on_status, timeout_s=timeout_s, cookie_path=cookie_path)

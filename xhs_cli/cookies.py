@@ -34,9 +34,22 @@ def get_config_dir() -> Path:
     return config_dir
 
 
-def get_cookie_path() -> Path:
-    """Get cookie file path."""
+def get_cookie_path(cookie_file: str | Path | None = None) -> Path:
+    """Get cookie file path.
+
+    If *cookie_file* is given and is an absolute path it is used directly;
+    if it is a relative file name it is resolved inside the config directory.
+    Otherwise the default ``cookies.json`` is returned.
+    """
+    if cookie_file is not None:
+        p = Path(cookie_file)
+        return p if p.is_absolute() else get_config_dir() / p
     return get_config_dir() / COOKIE_FILE
+
+
+def get_browser_cookie_path(browser: str) -> Path:
+    """Return the browser-specific cookie file path, e.g. ``chrome_cookies.json``."""
+    return get_config_dir() / f"{browser}_cookies.json"
 
 
 def get_token_cache_path() -> Path:
@@ -49,9 +62,13 @@ def get_index_cache_path() -> Path:
     return get_config_dir() / INDEX_CACHE_FILE
 
 
-def load_saved_cookies() -> dict[str, str] | None:
-    """Load cookies from local storage."""
-    cookie_path = get_cookie_path()
+def load_saved_cookies(cookie_path: Path | None = None) -> dict[str, str] | None:
+    """Load cookies from local storage.
+
+    Uses *cookie_path* when given, otherwise falls back to the default file.
+    """
+    if cookie_path is None:
+        cookie_path = get_cookie_path()
     if not cookie_path.exists():
         return None
     try:
@@ -64,21 +81,52 @@ def load_saved_cookies() -> dict[str, str] | None:
     return None
 
 
-def save_cookies(cookies: dict[str, str]) -> None:
+def save_cookies(cookies: dict[str, str], cookie_path: Path | None = None) -> None:
     """Save cookies to local storage with restricted permissions and TTL timestamp."""
-    cookie_path = get_cookie_path()
+    if cookie_path is None:
+        cookie_path = get_cookie_path()
+    cookie_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {**cookies, "saved_at": time.time()}
     cookie_path.write_text(json.dumps(payload, indent=2))
     cookie_path.chmod(0o600)
     logger.debug("Saved cookies to %s", cookie_path)
 
 
-def clear_cookies() -> None:
-    """Remove saved cookies."""
-    cookie_path = get_cookie_path()
+def clear_cookies(cookie_path: Path | None = None, *, all_cookies: bool = False) -> list[Path]:
+    """Remove saved cookies.
+
+    Args:
+        cookie_path: Specific cookie file to remove.  Defaults to the standard
+            ``cookies.json``.  Ignored when *all_cookies* is ``True``.
+        all_cookies: When ``True``, delete every ``*_cookies.json`` file inside
+            the config directory (i.e. all browser-specific files **and** the
+            default ``cookies.json``).
+
+    Returns:
+        List of paths that were actually deleted.
+    """
+    if all_cookies:
+        removed: list[Path] = []
+        config_dir = get_config_dir()
+        for p in config_dir.glob("*_cookies.json"):
+            p.unlink()
+            logger.debug("Cleared cookies from %s", p)
+            removed.append(p)
+        # Also remove the plain cookies.json if it exists
+        default = config_dir / COOKIE_FILE
+        if default.exists():
+            default.unlink()
+            logger.debug("Cleared cookies from %s", default)
+            removed.append(default)
+        return removed
+
+    if cookie_path is None:
+        cookie_path = get_cookie_path()
     if cookie_path.exists():
         cookie_path.unlink()
         logger.debug("Cleared cookies from %s", cookie_path)
+        return [cookie_path]
+    return []
 
 
 def _normalize_token_entry(value: Any) -> dict[str, Any] | None:
@@ -478,21 +526,55 @@ def extract_browser_cookies(source: str = "auto") -> tuple[str, dict[str, str]] 
     return None
 
 
+def _resolve_effective_path(cookie_source: str, cookies_file: str | Path | None) -> Path | None:
+    """Determine the effective cookie file path from source/file options.
+
+    Priority:
+    1. Explicit ``cookies_file`` → resolve via :func:`get_cookie_path`.
+    2. Specific browser (not ``"auto"``) → ``{browser}_cookies.json``.
+    3. ``"auto"`` / default → ``None`` (callers use :func:`get_cookie_path`).
+    """
+    if cookies_file is not None:
+        return get_cookie_path(cookies_file)
+    if cookie_source != "auto":
+        return get_browser_cookie_path(cookie_source)
+    return None
+
+
 def get_cookies(
-    cookie_source: str = "auto", *, force_refresh: bool = False
+    cookie_source: str = "auto",
+    *,
+    force_refresh: bool = False,
+    cookies_file: str | Path | None = None,
 ) -> tuple[str, dict[str, str]]:
     """
     Multi-strategy cookie acquisition with TTL-based auto-refresh.
 
     Returns ``(browser_name, cookies)``.
 
-    1. Load saved cookies (skip if stale > 7 days)
+    Cookie file resolution order:
+    - Explicit *cookies_file* path (absolute, or relative to config dir).
+    - Browser-specific ``{cookie_source}_cookies.json`` when source is not ``"auto"``.
+    - Default ``cookies.json`` otherwise (backwards-compatible).
+
+    1. Load saved cookies from the resolved path (skip if stale > 7 days)
     2. Extract from browser (auto-detect if *cookie_source* is ``"auto"``)
     3. Raise error if all fail
     """
+    effective_path = _resolve_effective_path(cookie_source, cookies_file)
+
+    def _save_path(browser_name: str) -> Path:
+        """Return the path to persist newly-extracted cookies."""
+        if effective_path is not None:
+            return effective_path
+        # Auto-detection found a concrete browser; persist to its own file.
+        if browser_name not in ("saved", "auto"):
+            return get_browser_cookie_path(browser_name)
+        return get_cookie_path()
+
     # 1. Try saved cookies first
     if not force_refresh:
-        saved = load_saved_cookies()
+        saved = load_saved_cookies(effective_path)
         if saved:
             saved_at = saved.pop("saved_at", 0)
             if saved_at and (time.time() - float(saved_at)) > _COOKIE_TTL_SECONDS:
@@ -502,7 +584,7 @@ def get_cookies(
                 )
                 result = extract_browser_cookies(cookie_source)
                 if result:
-                    save_cookies(result[1])
+                    save_cookies(result[1], _save_path(result[0]))
                     return result
                 logger.warning(
                     "Cookie refresh failed; using existing cookies (age: %d+ days)",
@@ -515,7 +597,8 @@ def get_cookies(
 
     result = extract_browser_cookies(cookie_source)
     if result:
-        save_cookies(result[1])
+        browser_name, browser_cookies = result
+        save_cookies(browser_cookies, _save_path(browser_name))
         return result
 
     raise NoCookieError(cookie_source)

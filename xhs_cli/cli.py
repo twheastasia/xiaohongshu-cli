@@ -54,13 +54,31 @@ _fix_windows_encoding()
     type=str,
     default="auto",
     show_default=True,
-    help="Browser to read cookies from (auto = try all installed browsers)",
+    help=(
+        "Browser to read cookies from. "
+        "Valid values: auto, arc, brave, chrome, chromium, edge, firefox, "
+        "librewolf, lynx, opera, opera_gx, safari, vivaldi, w3m. "
+        "'auto' tries all installed browsers."
+    ),
+)
+@click.option(
+    "--cookies-file",
+    type=click.Path(),
+    default=None,
+    envvar="XHS_COOKIES_FILE",
+    help=(
+        "Path to cookies JSON file (absolute, or relative to ~/.xiaohongshu-cli/). "
+        "Defaults to {browser}_cookies.json when --cookie-source is set, "
+        "or cookies.json otherwise. "
+        "Use different files per concurrent process to reduce risk of rate-limiting."
+    ),
 )
 @click.pass_context
-def cli(ctx, verbose: bool, cookie_source: str):
+def cli(ctx, verbose: bool, cookie_source: str, cookies_file: str | None):
     """xhs — Xiaohongshu CLI via reverse-engineered API 📕"""
     ctx.ensure_object(dict)
     ctx.obj["cookie_source"] = cookie_source
+    ctx.obj["cookies_file"] = cookies_file
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(message)s")

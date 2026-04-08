@@ -31,9 +31,13 @@ def _cookie_source(ctx) -> str:
     return ctx.obj.get("cookie_source", "auto") if ctx.obj else "auto"
 
 
+def _cookies_file(ctx) -> str | None:
+    return ctx.obj.get("cookies_file") if ctx.obj else None
+
+
 def get_client(ctx, *, force_refresh: bool = False) -> XhsClient:
     """Get a local client from the click context."""
-    _browser, cookies = get_cookies(_cookie_source(ctx), force_refresh=force_refresh)
+    _browser, cookies = get_cookies(_cookie_source(ctx), force_refresh=force_refresh, cookies_file=_cookies_file(ctx))
     return XhsClient(cookies)
 
 

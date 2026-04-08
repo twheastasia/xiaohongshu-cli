@@ -45,7 +45,7 @@ def sign_creator(
     """
     content = api
     if data is not None:
-        content += json.dumps(data, separators=(",", ":"))
+        content += json.dumps(data, separators=(",", ":"), ensure_ascii=False)
 
     x1 = hashlib.md5(content.encode("utf-8")).hexdigest()
     x2 = "0|0|0|1|0|0|1|0|0|0|1|0|0|0|0|1|0|0|0"

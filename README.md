@@ -114,6 +114,8 @@ xhs favorite 1
 # ─── Social ───────────────────────────────────────
 xhs favorites                          # My bookmarked notes (current user)
 xhs favorites <user_id>                # Other user's bookmarked notes
+xhs likes                             # My liked notes (current user)
+xhs likes <user_id>                   # Other user's liked notes
 xhs follow <user_id>                   # Follow a user
 xhs unfollow <user_id>                 # Unfollow a user
 
@@ -214,23 +216,28 @@ Use `OUTPUT=yaml|json|rich|auto` to override.
 
 xiaohongshu-cli ships with a [`SKILL.md`](./SKILL.md) that teaches AI agents how to use it.
 
-### Claude Code / Antigravity
+### [Skills CLI](https://github.com/vercel-labs/skills) (Recommended)
 
 ```bash
-# Clone into your project's skills directory
+npx skills add jackwener/xiaohongshu-cli
+```
+
+| Flag | Description |
+| --- | --- |
+| `-g` | Install globally (user-level, shared across projects) |
+| `-a claude-code` | Target a specific agent |
+| `-y` | Non-interactive mode |
+
+### Manual Install
+
+```bash
 mkdir -p .agents/skills
 git clone git@github.com:jackwener/xiaohongshu-cli.git .agents/skills/xiaohongshu-cli
-
-# Or just copy the SKILL.md
-curl -o .agents/skills/xiaohongshu-cli/SKILL.md \
-  https://raw.githubusercontent.com/jackwener/xiaohongshu-cli/main/SKILL.md
 ```
 
-### OpenClaw / ClawHub
+### ~~OpenClaw / ClawHub~~ (Deprecated)
 
-```bash
-clawhub install xiaohongshu-cli
-```
+> ⚠️ ClawHub install method is deprecated and no longer supported. Use [Skills CLI](#skills-cli-recommended) or Manual Install above.
 
 ## Project Structure
 
@@ -396,6 +403,8 @@ xhs hot -c travel                     # 分类: fashion, food, cosmetics, movie,
 # 社交
 xhs favorites                          # 我的收藏（自动识别当前用户）
 xhs favorites <user_id>                # 其他用户的收藏
+xhs likes                            # 我的点赞（自动识别当前用户）
+xhs likes <user_id>                  # 其他用户的点赞
 xhs follow <user_id>                   # 关注
 xhs unfollow <user_id>                 # 取消关注
 
@@ -450,18 +459,28 @@ Cookie 保存后有效期 **7 天**，超时后自动尝试从浏览器刷新。
 
 xiaohongshu-cli 自带 [`SKILL.md`](./SKILL.md)，让 AI Agent 能自动学习并使用本工具。
 
-### Claude Code / Antigravity
+### [Skills CLI](https://github.com/vercel-labs/skills)（推荐）
+
+```bash
+npx skills add jackwener/xiaohongshu-cli
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `-g` | 全局安装（用户级别，跨项目共享） |
+| `-a claude-code` | 指定目标 Agent |
+| `-y` | 非交互模式 |
+
+### 手动安装
 
 ```bash
 mkdir -p .agents/skills
 git clone git@github.com:jackwener/xiaohongshu-cli.git .agents/skills/xiaohongshu-cli
 ```
 
-### OpenClaw / ClawHub
+### ~~OpenClaw / ClawHub~~（已过时）
 
-```bash
-clawhub install xiaohongshu-cli
-```
+> ⚠️ ClawHub 安装方式已过时，不再支持。请使用上方的 Skills CLI 或手动安装。
 
 ## License
 
